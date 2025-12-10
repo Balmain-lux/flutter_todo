@@ -36,8 +36,19 @@ class _AuthPageState extends State<AuthPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
+      body: Container(
+        height: double.infinity,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors:[
+              const Color.fromARGB(255, 60, 48, 48),
+              const Color.fromARGB(255, 82, 78, 38),
+            ]   
+        )
+      ),
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,

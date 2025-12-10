@@ -1,5 +1,11 @@
+import 'dart:developer';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_todo/database/service_todo.dart';
 import 'package:flutter_todo/models/todo.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:motion_toast/motion_toast.dart';
 
 class TodoAddPage extends StatefulWidget {
   const TodoAddPage({super.key});
@@ -12,6 +18,44 @@ class _TodoAddPageState extends State<TodoAddPage> {
   TextEditingController titleController = TextEditingController();
   TextEditingController descriptionController = TextEditingController();
   DateTime? date;
+  ServiceTodo serviceTodo = ServiceTodo();
+  File? _selectFile;
+  XFile? _file;
+  String? url;
+  Future selectImageGallery() async {
+    final returnImage = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+    );
+    setState(() {
+      _selectFile = File(returnImage!.path);
+      _file = returnImage;
+    });
+  }
+
+  uploadImage() async {
+    await StorageCloud().uploadImage(_file!);
+  }
+
+  downloadUrl() async {
+    try {
+      final fileName = path.basename(_file!.path);
+      final image = Supabase.instance.client.storage
+          .from('storage')
+          .getPublicUrl(fileName);
+
+      setState(() {
+        url = image;
+      });
+    } catch (e) {
+      return;
+    }
+  }
+
+  void toastShowNull() {
+    MotionToast toast = MotionToast.error(description: Text("Заполните поля"));
+    toast.show(context);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -63,15 +107,13 @@ class _TodoAddPageState extends State<TodoAddPage> {
               ),
             ),
           ),
-          SizedBox(height: MediaQuery.of(context).size.height*0.02),
-          IconButton(
-            onPressed:() => showDatePicker(
-              onDatePickerModeChange: (value) {},
-              context: context,
-              firstDate:DateTime.now(),
-              lastDate: DateTime(2025,11,30),
+          SizedBox(height: MediaQuery.of(context).size.height * 0.02),
+          Container(
+            alignment: Alignment.centerRight,
+            child: IconButton(
+              onPressed: () => selectImageGallery(),
+              icon: (Icon(Icons.image)),
             ),
-            icon: Icon(Icons.calendar_month),
           ),
 
           SizedBox(height: MediaQuery.of(context).size.height * 0.02),
@@ -90,13 +132,22 @@ class _TodoAddPageState extends State<TodoAddPage> {
                 ),
               ),
               onPressed: () async {
-                Todo todo = Todo();
-                todo.title = titleController.text;
-                todo.description = descriptionController.text;
-                todo.dateTime = DateTime.now();
-                todo.dateTime = date;
-                newTodoList!.add(todo);
-                Navigator.popAndPushNamed(context, '/home');
+                if (titleController.text.isNotEmpty &&
+                    descriptionController.text.isNotEmpty &&
+                    url == null) {
+                  await uploadImage();
+                  await Future.delayed(Duration(seconds: 4));
+                  downloadUrl();
+
+                  await serviceTodo.addTodo(
+                    titleController.text,
+                    descriptionController.text,
+                    url!,
+                  );
+                  Navigator.popAndPushNamed(context, '/home');
+                } else {
+                  toastShowNull();
+                }
               },
               child: Text('Добавить'),
             ),
